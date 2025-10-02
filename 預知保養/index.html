@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>信義複材設備預知保養平台</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/128/16674/16674603.png" type="image/png">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      corePlugins: { preflight: false },
+      theme: { extend: { colors: { primary: '#0d6efd' } } }
+    }
+  </script>
+
+  <style>
+    .hidden {
+      display: none;
+    }
+
+    /* 全域放大字體 */
+    body {
+      font-size: 1.4rem; /* 全體文字放大 */
+    }
+
+    h2,
+    h3,
+    h4,
+    h5 {
+      font-size: 1.6rem !important;
+    }
+
+    label {
+      font-size: 1.4rem !important;
+    }
+
+    .btn {
+      font-size: 1.3rem !important;
+    }
+
+    /* 狀態文字 */
+    .status-text {
+      font-size: 1.4rem !important;
+      font-weight: bold;
+    }
+
+    .range-text {
+      font-size: 1.3rem !important;
+      font-weight: bold;
+      color: #1d4ed8; /* 藍色 */
+    }
+
+    /* 最小值 & 最大值 */
+    .minmax-text {
+      font-size: 1.3rem !important;
+      font-weight: bold;
+      color: #374151; /* 深灰色 */
+    }
+
+    /* 警告文字更大更醒目 */
+    #pca-warning,
+    #mixer-warning {
+      font-size: 1.4rem !important;
+      font-weight: bold;
+    }
+
+    /* Toast 字體放大 */
+    .toast-body {
+      font-size: 1.4rem !important;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+
+  <!-- 導覽列 -->
+  <nav class="navbar bg-white shadow py-4">
+    <div class="container-fluid d-flex justify-between items-center px-4">
+      <span class="navbar-brand text-2xl font-bold text-primary d-flex align-items-center gap-2">
+        <img src="https://cdn-icons-png.flaticon.com/128/16674/16674603.png" width="50">
+        信義複材 設備預知保養平台
+      </span>
+    </div>
+  </nav>
+
+  <!-- 首頁主要功能 -->
+  <div class="container py-10">
+    <h2 class="text-2xl font-bold text-primary mb-6">功能選單</h2>
+    <div class="grid grid-cols-2 gap-6 text-center">
+      <button class="btn btn-outline-primary py-6 text-xl fw-bold" onclick="showSection('pca')">成型機 PCA</button>
+      <button class="btn btn-outline-primary py-6 text-xl fw-bold" onclick="showSection('mixer')">拌合機 Mixer</button>
+    </div>
+  </div>
+
+  <!-- PCA 區塊 -->
+  <div id="pca" class="container pb-10 hidden">
+    <div class="bg-white shadow rounded-lg p-4 mb-6">
+      <h4 class="text-lg font-bold text-primary mb-3">匯入 PCA 數據</h4>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label>側向油壓</label><input id="input-側向油壓" type="number" step="0.1" class="form-control"></div>
+        <div><label>二次加壓</label><input id="input-二次加壓" type="number" step="0.1" class="form-control"></div>
+        <div><label>主油壓</label><input id="input-主油壓" type="number" step="0.1" class="form-control"></div>
+        <div><label>油槽油溫</label><input id="input-油槽油溫" type="number" step="0.1" class="form-control"></div>
+        <div><label>油泵溫度</label><input id="input-油泵溫度" type="number" step="0.1" class="form-control"></div>
+      </div>
+      <button class="btn btn-primary mt-3" onclick="importPCA()">匯入數據</button>
+    </div>
+
+    <div class="flex items-center gap-3 mb-2">
+      <h3 class="text-xl font-bold text-primary">PCA 詳細狀態</h3>
+      <span id="pca-overall" class="w-6 h-6 rounded-full"></span>
+    </div>
+    <p id="pca-warning" class="mb-4"></p>
+    <div id="pca-blocks" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+
+  <!-- 拌合機 區塊 -->
+  <div id="mixer" class="container pb-10 hidden">
+    <div class="bg-white shadow rounded-lg p-4 mb-6">
+      <h4 class="text-lg font-bold text-primary mb-3">匯入 拌合機 數據</h4>
+      <input type="file" id="csvFile" accept=".csv" class="form-control mb-3" />
+      <button class="btn btn-primary" onclick="importMixerCSV()">匯入CSV</button>
+    </div>
+
+    <div class="flex items-center gap-3 mb-2">
+      <h3 class="text-xl font-bold text-primary">拌合機 詳細狀態</h3>
+      <span id="mixer-overall" class="w-6 h-6 rounded-full"></span>
+    </div>
+    <p id="mixer-warning" class="mb-4"></p>
+    <div id="mixer-blocks" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    <!-- 電流折線圖 -->
+    <div class="bg-white shadow rounded-lg p-4 mt-6">
+      <h4 class="text-lg font-bold text-primary mb-3">電流趨勢圖</h4>
+      <canvas id="mixerChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Bootstrap Toast 通知 -->
+  <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999">
+    <div id="statusToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">⚠️ 系統異常，請立即檢查！</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS 控制區塊 -->
+  <script>
+    function showSection(sectionId) {
+      document.getElementById("pca").classList.add("hidden");
+      document.getElementById("mixer").classList.add("hidden");
+      document.getElementById(sectionId).classList.remove("hidden");
+      window.scrollTo({ top: document.getElementById(sectionId).offsetTop - 50, behavior: "smooth" });
+    }
+
+    // --- PCA 設定 ---
+    const rangesPCA = {
+      "側向油壓": { min: 2.9, q1: 3.1, q3: 3.7, max: 4.4, img: "images/側向油壓.png" },
+      "二次加壓": { min: 13.2, q1: 14.1, q3: 14.6, max: 16.3, img: "images/二次加壓.png" },
+      "主油壓": { min: 46.3, q1: 47.7, q3: 48.8, max: 48.9, img: "images/主油壓.png" },
+      "油槽油溫": { min: 31.6, q1: 32.7, q3: 35.3, max: 56.9, img: "images/油槽油溫.png" },
+      "油泵溫度": { min: 30.3, q1: 31.0, q3: 33.4, max: 57.9, img: "images/油泵溫度.png" }
+    };
+    let currentValuesPCA = { "側向油壓": 0, "二次加壓": 0, "主油壓": 0, "油槽油溫": 0, "油泵溫度": 0 };
+
+    // --- Mixer 設定 ---
+    const rangesMixer = {
+      "電流": { min: 5.0, q1: 5.0, q3: 10.0, max: 11.5, img: "images/電流.png" }
+    };
+    let currentValuesMixer = { "電流": 0 };
+
+    function getStatusColor(value, range) {
+      if (isNaN(value)) return { color: "gray", text: "未輸入" };
+      if (value < range.min || value > range.max) return { color: "red", text: "異常" };
+      else if (value < range.q1 || value > range.q3) return { color: "yellow", text: "臨界" };
+      else return { color: "green", text: "正常" };
+    }
+
+    function getOverallStatus(values, ranges) {
+      let overall = "green";
+      Object.keys(ranges).forEach(key => {
+        const status = getStatusColor(values[key], ranges[key]).color;
+        if (status === "red") overall = "red";
+        else if (status === "yellow" && overall !== "red") overall = "yellow";
+      });
+      return overall;
+    }
+
+    function getWarningText(status) {
+      if (status === "red") return "⚠️ 警告：系統異常，請立即檢查";
+      else if (status === "yellow") return "⚠️ 注意：部分數據臨界，需關注";
+      else return "✅ 系統正常";
+    }
+
+    function showToast(message, color) {
+      const toastEl = document.getElementById("statusToast");
+      toastEl.querySelector(".toast-body").textContent = message;
+      toastEl.className = `toast align-items-center text-white bg-${color} border-0`;
+      const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+      toast.show();
+    }
+
+    function renderBlocks(containerId, overallId, warningId, values, ranges) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  Object.keys(ranges).forEach(key => {
+    const range = ranges[key];
+    const value = values[key];
+    const status = getStatusColor(value, range);
+    container.innerHTML += `
+      <div class="bg-white shadow rounded-lg p-4 border-t-4 border-${status.color}-500">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="w-4 h-4 rounded-full bg-${status.color}-500"></span>
+          <h5 class="font-bold text-lg">${key}</h5>
+        </div>
+        <img src="${range.img}" alt="${key}" width="300" class="mb-3">
+        <p class="status-text text-${status.color}-600">
+          狀態：${status.text} (${value || "未輸入"})
+        </p>
+        <p class="range-text">
+          正常範圍：${range.q1} ~ ${range.q3}
+        </p>
+        <p class="minmax-text">
+          最小值 (Min)：${range.min}，最大值 (Max)：${range.max}
+        </p>
+      </div>
+    `;
+  });
+
+  const overallStatus = getOverallStatus(values, ranges);
+  document.getElementById(overallId).className = `w-6 h-6 rounded-full bg-${overallStatus}-500`;
+  const warningText = getWarningText(overallStatus);
+  document.getElementById(warningId).textContent = warningText;
+  document.getElementById(warningId).className =
+    overallStatus === "red" ? "text-red-600 font-bold" :
+    overallStatus === "yellow" ? "text-yellow-600 font-bold" :
+    "text-green-600 font-bold";
+
+  if (overallStatus === "red") showToast("⚠️ 系統異常，請立即檢查！", "danger");
+  else if (overallStatus === "yellow") showToast("⚠️ 注意：部分數據臨界，需關注", "warning");
+}
+
+    function importPCA() {
+      currentValuesPCA["側向油壓"] = parseFloat(document.getElementById("input-側向油壓").value);
+      currentValuesPCA["二次加壓"] = parseFloat(document.getElementById("input-二次加壓").value);
+      currentValuesPCA["主油壓"] = parseFloat(document.getElementById("input-主油壓").value);
+      currentValuesPCA["油槽油溫"] = parseFloat(document.getElementById("input-油槽油溫").value);
+      currentValuesPCA["油泵溫度"] = parseFloat(document.getElementById("input-油泵溫度").value);
+      renderBlocks("pca-blocks", "pca-overall", "pca-warning", currentValuesPCA, rangesPCA);
+    }
+
+    let mixerChart = null; // 全域變數，避免重複繪製
+
+    function importMixerCSV() {
+      const fileInput = document.getElementById("csvFile").files[0];
+      if (!fileInput) {
+        alert("請選擇一個 CSV 檔案！");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result.trim();
+        const rows = text.split("\n").map(r => r.split(","));
+
+        // 假設 CSV 標題為 Date,Time,電流
+        const labels = rows.slice(1).map(r => r[0] + " " + r[1]); // 時間軸 = Date + Time
+        const values = rows.slice(1).map(r => parseFloat(r[2]));  // 電流數值
+
+        // 計算平均值
+        const avgValue = values.reduce((a, b) => a + b, 0) / values.length;
+        currentValuesMixer["電流"] = avgValue.toFixed(2);
+
+        // 更新狀態卡片
+        renderBlocks("mixer-blocks", "mixer-overall", "mixer-warning", currentValuesMixer, rangesMixer);
+
+        // 畫電流折線圖
+        const ctx = document.getElementById("mixerChart").getContext("2d");
+        if (mixerChart) mixerChart.destroy(); // 避免重複疊圖
+        mixerChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "電流 (A)",
+              data: values,
+              borderColor: "blue",
+              backgroundColor: "rgba(0,123,255,0.2)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true, labels: { font: { size: 14 } } }
+            },
+            scales: {
+              x: { ticks: { font: { size: 12 } } },
+              y: { ticks: { font: { size: 12 } } }
+            }
+          }
+        });
+      };
+      reader.readAsText(fileInput, "UTF-8");
+    }
+  </script>
+</body>
+</html>
